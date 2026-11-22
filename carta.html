@@ -1,0 +1,1480 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a1e24'/%3E%3Ctext x='16' y='22' font-family='monospace' font-size='18' font-weight='700' text-anchor='middle' fill='%23ff8ab0'%3E@%3C/text%3E%3C/svg%3E">
+<meta name="theme-color" content="#04080b">
+<title>Uma carta para você</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* Layout: o buquê ocupa o palco; o texto fica embaixo no celular e ao lado no computador. */
+:root {
+  --bg: #04080b; --stage: #03070a; --stage-line: #1c3038; --line: #17262e; --panel: #0a1217;
+  --fg: #e2f3f5; --dim: #7a959d; --accent: #5ff0e0; --on-accent: #021412; --pink: #ff8ad8;
+  --sheet: #0a141a; --rule: rgba(95,240,224,0.13); --hole: #04080b; --ink: #e2f3f5;
+  --env: #16303a; --env2: #0d1d24; --flap: #1c3c48; --letter: #e9f7f8; --letter-ink: #21424d;
+  --display: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --letra: "Patrick Hand", "Segoe Print", "Comic Sans MS", cursive; --fs: 20px; --lh: 34px;
+  color-scheme: dark;
+}
+:root[data-tema="papel"] {
+  --bg: #e9dfd2; --stage: #03070a; --line: #d3c4b0; --panel: #fffdf5;
+  --fg: #2c2b48; --dim: #6f6670; --accent: #b83a73; --on-accent: #fff; --pink: #b83a73;
+  --sheet: #fffdf5; --rule: #bcd0e8; --hole: #e9dfd2; --ink: #2c2b48;
+  --env: #f2c9d5; --env2: #e7b4c3; --flap: #ebb9c8; --letter: #fffdf5; --letter-ink: #8c3b5a;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg); color: var(--fg); font: 14px/1.5 var(--mono);
+  padding: max(12px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  display: flex; flex-direction: column; overflow-x: hidden;
+}
+[hidden] { display: none !important; }
+#app { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.wrap { flex: 1; min-height: 0; display: grid; grid-template-rows: minmax(300px, 1fr) auto; gap: 14px; }
+.stage { position: relative; min-width: 0; min-height: 0; border: 1px solid var(--stage-line); border-radius: 8px; overflow: hidden; background: var(--stage); }
+canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+.scan { position: absolute; inset: 0; pointer-events: none; background:
+  repeating-linear-gradient(to bottom, rgba(0,0,0,0.2) 0, rgba(0,0,0,0.2) 1px, transparent 1px, transparent 3px),
+  radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%); }
+.card { min-width: 0; display: flex; flex-direction: column; gap: 14px; padding-bottom: 4px; }
+.notebook {
+  position: relative; padding: var(--lh) 22px var(--lh) 44px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background-color: var(--sheet);
+  box-shadow: 0 14px 30px -18px rgba(0,0,0,0.5); min-height: calc(var(--lh) * 9); overflow: hidden; flex: none;
+  background-image:
+    radial-gradient(circle at 50% 50%, var(--hole) 0 6px, transparent 6.5px),
+    linear-gradient(to bottom, transparent calc(var(--lh) - 9px), var(--rule) calc(var(--lh) - 9px), var(--rule) calc(var(--lh) - 8px), transparent calc(var(--lh) - 8px));
+  background-size: 24px calc(var(--lh) * 3), 100% var(--lh);
+  background-position: 6px 0, 0 0; background-repeat: repeat-y, repeat-y;
+}
+.controls { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.eyebrow { margin: 0; font: 400 11px/var(--lh) var(--mono); letter-spacing: 0.04em; text-transform: uppercase; color: var(--dim); }
+h1 {
+  margin: 0; font: 700 calc(var(--fs) * 1.5)/calc(var(--lh) * 2) var(--letra); overflow-wrap: anywhere;
+  background: linear-gradient(90deg, #5ff0e0, #a78bfa 55%, #ff8ad8); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+:root[data-tema="papel"] h1 { background: none; color: var(--accent); -webkit-background-clip: border-box; background-clip: border-box; }
+#msg { display: flex; flex-direction: column; gap: 0; min-height: calc(var(--lh) * 4); cursor: default; }
+#msg p { margin: 0; font: 500 var(--fs)/var(--lh) var(--letra); color: var(--ink); overflow-wrap: anywhere; text-indent: 1.4em; }
+#msg p.typing::after { content: "▍"; color: var(--accent); margin-left: 2px; animation: blink 0.9s steps(1) infinite; }
+.sign { margin: 0; font: 700 calc(var(--fs) * 1.1)/var(--lh) var(--letra); color: var(--pink); opacity: 0; transition: opacity 1.2s; overflow-wrap: anywhere; text-align: right; }
+.sign.show { opacity: 1; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.models { display: flex; flex-wrap: wrap; gap: 6px; }
+button {
+  font: 500 12px/1 var(--mono); color: var(--fg); background: var(--panel); border: 1px solid var(--line);
+  border-radius: 999px; padding: 10px 15px; cursor: pointer;
+}
+button:hover { border-color: var(--dim); }
+button:focus-visible, canvas:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+button.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+input[type="text"], select {
+  width: 100%; font: 400 16px/1.4 var(--display); color: var(--fg); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 6px; padding: 11px 13px;
+}
+select { font: 500 12px/1 var(--mono); padding: 10px 12px; border-radius: 999px; }
+input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; height: 28px; }
+details.opt { border: 1px solid var(--line); border-radius: 12px; padding: 0 16px; background: var(--panel); }
+details.opt summary { cursor: pointer; padding: 12px 0; font: 500 12px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+.optGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px 16px; align-items: end; padding-bottom: 14px; }
+.optGrid label { display: flex; flex-direction: column; gap: 6px; min-width: 0; font: 400 11px/1.3 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+.optGrid b { color: var(--fg); font-weight: 500; letter-spacing: 0; text-transform: none; }
+.chks { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.optGrid label.chk { flex-direction: row; align-items: center; gap: 7px; text-transform: none; letter-spacing: 0; font-size: 12px; color: var(--fg); cursor: pointer; }
+.optGrid input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; }
+.ask { padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.ask p { margin: 0; font: 400 15px/1.5 var(--display); }
+.foot { margin: 0; padding-top: 6px; font-size: 11px; color: var(--dim); }
+.foot a { color: var(--accent); text-decoration: none; }
+.foot a:hover { text-decoration: underline; }
+
+/* envelope */
+.cover {
+  position: fixed; inset: 0; z-index: 20; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 22px; padding: 24px; text-align: center; transition: opacity 0.9s ease, visibility 0.9s;
+}
+.cover.gone { opacity: 0; visibility: hidden; pointer-events: none; }
+.cover .coverText, .cover .coverHint { transition: opacity 0.4s; }
+.cover.opening .coverText, .cover.opening .coverHint { opacity: 0; }
+.coverText { margin: 0; font: 600 clamp(24px, 5.5vw, 38px)/1.15 var(--display); text-wrap: balance; max-width: 20ch; overflow-wrap: anywhere; }
+.coverHint { margin: 0; color: var(--dim); font-size: 11px; letter-spacing: 0.08em; }
+.env { position: relative; width: min(84vw, 380px); aspect-ratio: 3 / 2; perspective: 900px; margin-top: 18px; }
+.env > * { position: absolute; }
+.env-back { inset: 0; background: var(--env2); border-radius: 6px; }
+.env-letter {
+  left: 7%; right: 7%; top: 9%; bottom: 9%; z-index: 1; background: var(--letter); border-radius: 4px; color: var(--letter-ink);
+  display: flex; align-items: flex-start; justify-content: center; padding-top: 12px; font: 600 15px/1.2 var(--display); overflow: hidden;
+  transition: transform 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.55s, z-index 0s 1.3s; box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+  background-image: repeating-linear-gradient(to bottom, transparent 0 17px, color-mix(in srgb, var(--letter-ink) 12%, transparent) 17px 18px); background-position: 0 38px; background-size: 100% 100%;
+}
+.env-front { inset: 0; z-index: 2; background: var(--env); clip-path: polygon(0 0, 50% 56%, 100% 0, 100% 100%, 0 100%); border-radius: 6px; }
+.env-flap {
+  left: 0; right: 0; top: 0; height: 56%; z-index: 3; background: var(--flap); clip-path: polygon(0 0, 100% 0, 50% 100%);
+  transform-origin: top; transition: transform 0.7s ease, z-index 0s 0.35s;
+}
+.seal {
+  left: 50%; top: 56%; z-index: 4; transform: translate(-50%, -50%); width: 56px; height: 56px; border-radius: 50%; padding: 0;
+  background: var(--accent); color: var(--on-accent); border: 0; font: 600 24px/1 var(--display); box-shadow: 0 3px 14px rgba(0,0,0,0.35);
+  transition: opacity 0.3s, transform 0.3s; animation: pulse 2.2s ease-in-out infinite;
+}
+.seal:hover { transform: translate(-50%, -50%) scale(1.06); }
+.env.open .env-flap { transform: rotateX(180deg); z-index: 0; }
+.env.open .env-letter { transform: translateY(-88%); z-index: 4; }
+.env.open .seal { opacity: 0; pointer-events: none; animation: none; }
+.cover .box { width: 100%; max-width: 420px; }
+.cover .step { margin: 0 0 8px; font: 400 11px/1.4 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+.cover .q { margin: 0 0 18px; font: 600 clamp(22px, 5vw, 30px)/1.2 var(--display); text-wrap: balance; overflow-wrap: anywhere; }
+.cover .fb { min-height: 1.5em; margin: 10px 0 0; color: var(--pink); font: 500 15px/1.4 var(--display); }
+.cover form button { margin-top: 14px; }
+.cover input { text-align: center; }
+.sheet { position: fixed; inset: 0; z-index: 30; background: color-mix(in srgb, var(--bg) 95%, transparent); overflow-y: auto; padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(16px, env(safe-area-inset-bottom, 0px)); }
+.sheetBox { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.sheetBox h2 { margin: 0; font: 600 26px/1.15 var(--display); }
+.sheetBox p { margin: 0; color: var(--dim); font: 400 14px/1.5 var(--display); }
+.sheetBox label { display: flex; flex-direction: column; gap: 6px; font: 500 15px/1.35 var(--display); }
+#guiaCampos { display: flex; flex-direction: column; gap: 14px; }
+.sheetActions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+pre.res { margin: 0; white-space: pre-wrap; word-break: break-word; font: 400 13px/1.55 var(--mono); padding: 12px 14px; border: 1px solid var(--line); border-radius: 6px; color: var(--fg); }
+a.btn { display: inline-block; font: 500 12px/1 var(--mono); text-decoration: none; padding: 10px 13px; border-radius: 4px; background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent); }
+.broken { margin: auto; max-width: 420px; text-align: center; font: 400 16px/1.5 var(--display); }
+.broken a { color: var(--accent); }
+@keyframes blink { 50% { opacity: 0; } }
+@keyframes pulse { 50% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent) 22%, transparent), 0 3px 14px rgba(0,0,0,0.35); } }
+@media (min-aspect-ratio: 1/1) and (min-width: 760px) {
+  .wrap { grid-template-rows: none; grid-template-columns: minmax(0, 1.35fr) minmax(300px, 1fr); gap: 28px; align-items: center; }
+  .stage { height: 100%; min-height: 0; }
+  .card { max-height: 100%; overflow-y: auto; padding-right: 2px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cover, .sign, .env-letter, .env-flap { transition: none; } .seal { animation: none; } #msg p.typing::after { animation: none; }
+}
+</style>
+</head>
+<body>
+
+<div id="app" hidden>
+  <div class="wrap">
+    <main class="stage" id="stage">
+      <canvas id="c" tabindex="0" aria-label="Flores em 3D desenhadas com caracteres. Arraste para girar."></canvas>
+      <div class="scan" aria-hidden="true"></div>
+    </main>
+    <section class="card">
+      <div class="notebook" id="notebook">
+        <p class="eyebrow" id="eyebrow"></p>
+        <h1 id="para"></h1>
+        <div id="msg" title="Toque para mostrar o texto todo"></div>
+        <p class="sign" id="sign"></p>
+      </div>
+      <div class="controls">
+      <div class="ask" id="ask" hidden>
+        <p>Um pensamento: quer me ajudar a acertar nos próximos presentes? São poucas perguntas, e todas opcionais.</p>
+        <button type="button" id="askBtn" class="primary">Responder</button>
+      </div>
+      <div class="models" id="models" role="group" aria-label="Escolha a flor" hidden></div>
+      <div class="tools" id="tools">
+        <button type="button" id="mus" aria-pressed="false">Música: desligada</button>
+      </div>
+      <details class="opt" id="opt">
+        <summary>Opções</summary>
+        <div class="optGrid">
+          <label>Cores
+            <select id="palSel">
+              <option value="holo">Holográfica</option>
+              <option value="natural">Cores naturais</option>
+              <option value="green">Fósforo verde</option>
+              <option value="amber">Âmbar</option>
+            </select>
+          </label>
+          <label>Caracteres
+            <select id="rampSel">
+              <option value="classic">Clássico</option>
+              <option value="detailed">Detalhado</option>
+              <option value="blocks">Blocos</option>
+              <option value="code">Código</option>
+            </select>
+          </label>
+          <label>Tamanho do caractere <b id="fontVal"></b>
+            <input type="range" id="font" min="7" max="16" step="1" value="9">
+          </label>
+          <div class="chks">
+            <label class="chk"><input type="checkbox" id="auto"> Girar sozinho</label>
+            <label class="chk"><input type="checkbox" id="edges"> Contornos</label>
+            <label class="chk"><input type="checkbox" id="fx"> Brilho holográfico</label>
+          </div>
+          <button type="button" id="reset">Reiniciar vista</button>
+        </div>
+      </details>
+      <p class="foot" id="foot" hidden></p>
+      </div>
+    </section>
+  </div>
+
+  <div class="cover" id="cover">
+    <p class="coverText" id="coverText"></p>
+    <div class="env" id="env">
+      <div class="env-back"></div>
+      <div class="env-letter" id="envTo"></div>
+      <div class="env-front"></div>
+      <div class="env-flap"></div>
+      <button type="button" class="seal" id="open" aria-label="Abrir a carta">♥</button>
+    </div>
+    <p class="coverHint" id="coverHint">toque no selo · com som</p>
+    <form id="quiz" class="box" hidden autocomplete="off">
+      <p class="step" id="quizStep"></p>
+      <p class="q" id="quizQ"></p>
+      <input type="text" id="quizIn" aria-labelledby="quizQ" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <p class="fb" id="quizFb" role="status"></p>
+      <button type="submit" class="primary">Confirmar</button>
+    </form>
+  </div>
+
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
+    <form class="sheetBox" id="guia" autocomplete="off">
+      <h2 id="sheetTitle">Guia de presentes</h2>
+      <p id="guiaIntro"></p>
+      <div id="guiaCampos"></div>
+      <div class="sheetActions">
+        <button type="submit" class="primary">Pronto</button>
+        <button type="button" id="guiaFechar">Depois</button>
+      </div>
+    </form>
+    <div class="sheetBox" id="resultado" hidden>
+      <h2>Obrigado por responder!</h2>
+      <p id="resIntro"></p>
+      <pre class="res" id="resTxt"></pre>
+      <div class="sheetActions">
+        <a class="btn" id="wa" target="_blank" rel="noopener" hidden>Enviar pelo WhatsApp</a>
+        <button type="button" id="resCopiar" hidden>Copiar respostas</button>
+        <button type="button" id="resFechar" class="primary">Voltar às flores</button>
+      </div>
+      <p id="resMsg" role="status"></p>
+    </div>
+  </div>
+</div>
+<div class="broken" id="broken" hidden>
+  <p>Não consegui abrir esta carta. O link parece incompleto ou foi cortado ao ser enviado. Peça para quem mandou enviar de novo.</p>
+</div>
+
+<script>
+const CARTA = null/*CFG*/;
+
+// Codec do link da carta: JSON -> (deflate) -> base64url. Sem servidor.
+const Codec = (() => {
+  const b64e = (u8) => {
+    let s = '';
+    for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  };
+  const b64d = (str) => {
+    str = str.replace(/-/g, '+').replace(/_/g, '/');
+    while (str.length % 4) str += '=';
+    const bin = atob(str), u = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    return u;
+  };
+  async function pipe(u8, stream) {
+    const s = new Blob([u8]).stream().pipeThrough(stream);
+    return new Uint8Array(await new Response(s).arrayBuffer());
+  }
+  async function encode(obj) {
+    const u8 = new TextEncoder().encode(JSON.stringify(obj));
+    if (typeof CompressionStream !== 'undefined') {
+      try { return 'z.' + b64e(await pipe(u8, new CompressionStream('deflate-raw'))); } catch (e) { /* cai para sem compressão */ }
+    }
+    return 'j.' + b64e(u8);
+  }
+  async function decode(str) {
+    const kind = str.slice(0, 2), u8 = b64d(str.slice(2));
+    let raw = u8;
+    if (kind === 'z.') {
+      if (typeof DecompressionStream === 'undefined') throw new Error('sem-descompressao');
+      raw = await pipe(u8, new DecompressionStream('deflate-raw'));
+    } else if (kind !== 'j.') throw new Error('formato');
+    return JSON.parse(new TextDecoder().decode(raw));
+  }
+  return { encode, decode };
+})();
+
+// Perguntas de verificação: as respostas viajam só como hash (brincadeira, não segurança).
+const Quiz = (() => {
+  const norm = (s) => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  const MESES = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  const hash = (str) => {
+    let h1 = 0xdeadbeef ^ 7, h2 = 0x41c6ce57 ^ 7;
+    for (let i = 0, ch; i < str.length; i++) {
+      ch = str.charCodeAt(i);
+      h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+  };
+  const dateKey = (d, m) => 'd' + d + '/' + m;
+  function parseDate(input) {
+    const t = norm(input), nums = (t.match(/\d+/g) || []).map(Number);
+    let mes = 0;
+    MESES.forEach((m, i) => { if (t.indexOf(m) >= 0) mes = i + 1; });
+    if (mes) return nums.length >= 1 ? [nums[0], mes] : null;
+    return nums.length >= 2 ? [nums[0], nums[1]] : null;
+  }
+  const matchDate = (input, hashes) => { const p = parseDate(input); return !!p && hashes.indexOf(hash(dateKey(p[0], p[1]))) >= 0; };
+  function matchText(input, hashes) {
+    const w = norm(input).split(' ').filter(Boolean);
+    for (let i = 0; i < w.length; i++) for (let n = 1; n <= 6 && i + n <= w.length; n++) {
+      if (hashes.indexOf(hash(w.slice(i, i + n).join(' '))) >= 0) return true;
+    }
+    return false;
+  }
+  return { norm, hash, dateKey, matchDate, matchText };
+})();
+
+
+// Músicas originais e calmas, geradas em tempo real pelo navegador (nenhuma gravação, nenhum direito autoral).
+function makeMusic(ac, out) {
+  const mtof = (n) => 440 * Math.pow(2, (n - 69) / 12);
+  const rev = ac.createConvolver(), len = Math.floor(ac.sampleRate * 2.8), ir = ac.createBuffer(2, len, ac.sampleRate);
+  for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6); }
+  rev.buffer = ir;
+  const wet = ac.createGain(); wet.gain.value = 0.32; wet.connect(rev); rev.connect(out);
+  const dry = ac.createGain(); dry.gain.value = 1; dry.connect(out);
+  const mk = (type, freq) => { const f = ac.createBiquadFilter(); f.type = type; f.frequency.value = freq; return f; };
+  const warm = mk('lowpass', 2200); warm.connect(dry); warm.connect(wet);
+  const padLP = mk('lowpass', 800); padLP.connect(dry); padLP.connect(wet);
+  const noise = ac.createBuffer(1, Math.floor(ac.sampleRate * 1.5), ac.sampleRate);
+  { const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+
+  function perc(dest, m, t, g, dur, o) {
+    o = o || {};
+    const osc = ac.createOscillator(), e = ac.createGain();
+    osc.type = o.type || 'sine'; osc.frequency.value = mtof(m);
+    if (o.det) osc.detune.value = o.det;
+    e.gain.setValueAtTime(0.0001, t);
+    e.gain.linearRampToValueAtTime(g, t + (o.atk || 0.008));
+    e.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(e); e.connect(dest); if (dest === dry) e.connect(wet);
+    osc.start(t); osc.stop(t + dur + 0.05);
+  }
+  const bell = (m, t, g, dur) => { perc(dry, m, t, g, dur); perc(dry, m + 12, t, g * 0.22, dur * 0.6); };
+  const key = (m, t, g, dur) => { perc(warm, m, t, g, dur, { type: 'triangle', atk: 0.01 }); perc(warm, m + 12, t, g * 0.16, dur * 0.5); };
+  function pad(m, t, g, dur) {
+    for (const det of [-7, 7]) {
+      const osc = ac.createOscillator(), e = ac.createGain();
+      osc.type = 'sawtooth'; osc.frequency.value = mtof(m); osc.detune.value = det;
+      e.gain.setValueAtTime(0.0001, t);
+      e.gain.linearRampToValueAtTime(g, t + 1.4);
+      e.gain.setValueAtTime(g, t + Math.max(1.5, dur - 0.2));
+      e.gain.linearRampToValueAtTime(0.0001, t + dur + 1.4);
+      osc.connect(e); e.connect(padLP);
+      osc.start(t); osc.stop(t + dur + 1.5);
+    }
+  }
+  function click(t, g, hp) {
+    const s = ac.createBufferSource(), e = ac.createGain(), f = mk('highpass', hp);
+    s.buffer = noise; e.gain.setValueAtTime(g, t); e.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+    s.connect(f); f.connect(e); e.connect(dry);
+    s.start(t, Math.random() * 1.2, 0.04);
+  }
+  const rnd = (n) => { let x = Math.imul(n + 1, 2654435761) >>> 0; x ^= x >>> 15; x = Math.imul(x, 2246822507) >>> 0; return (x >>> 0) / 4294967296; };
+
+  const styles = {};
+  { // Caixinha de música
+    const CH = [[48, [60, 64, 67, 71]], [45, [57, 60, 64, 67]], [41, [53, 57, 60, 64]], [43, [55, 59, 62, 67]]];
+    const ARP = [0, 1, 2, 3, 2, 1, 2, 1];
+    const MEL = [[76, 0, 79, 0, 83, 0, 81, 79], [72, 0, 76, 0, 79, 0, 77, 76], [77, 0, 81, 0, 84, 0, 83, 81], [74, 0, 79, 0, 83, 0, 81, 79]];
+    const E = 60 / 72 / 2;
+    styles.caixinha = { eighth: E, play(s, t) {
+      const bar = (s >> 3) & 3, j = s & 7, c = CH[bar];
+      if (j === 0) { c[1].forEach((m) => pad(m - 12, t, 0.007, E * 8)); bell(c[0], t, 0.12, 2.2); }
+      if (j === 4) bell(c[0] + 7, t, 0.07, 1.6);
+      bell(c[1][ARP[j]] + 12, t, 0.085, 1.5);
+      if (MEL[bar][j]) bell(MEL[bar][j], t, 0.12, 2.0);
+    } };
+  }
+  { // Piano suave
+    const ROOT = [45, 41, 48, 43], CH = [[57, 60, 64, 67], [53, 57, 60, 64], [60, 64, 67, 71], [55, 59, 62, 67]];
+    const ARP = [0, 1, 2, 3, 2, 1, 2, 1];
+    const MEL = [[76, 0, 0, 74, 0, 72, 0, 0], [72, 0, 0, 74, 0, 76, 0, 0], [79, 0, 0, 76, 0, 74, 0, 0], [74, 0, 0, 72, 0, 71, 0, 0]];
+    const E = 60 / 62 / 2;
+    styles.piano = { eighth: E, play(s, t) {
+      const bar = (s >> 3) & 3, j = s & 7;
+      if (j === 0) key(ROOT[bar] - 12, t, 0.16, 3.2);
+      if (j === 4) key(ROOT[bar] + 7 - 12, t, 0.09, 2.0);
+      key(CH[bar][ARP[j]], t, 0.045, 1.8);
+      if (MEL[bar][j]) key(MEL[bar][j], t, 0.12, 2.4);
+    } };
+  }
+  { // Sonho (pads longos e sinos esparsos)
+    const CH = [[62, 66, 69, 73], [59, 62, 66, 69], [55, 59, 62, 66], [57, 61, 64, 69]];
+    const PENT = [74, 76, 78, 81, 83, 86];
+    const E = 60 / 52 / 2;
+    styles.sonho = { eighth: E, play(s, t) {
+      const bar = (s >> 3) & 3, j = s & 7, c = CH[bar];
+      if (j === 0) { c.forEach((m) => pad(m - 12, t, 0.0085, E * 8)); pad(c[0] - 24, t, 0.011, E * 8); }
+      if (rnd(s * 3) < 0.34) bell(PENT[Math.floor(rnd(s * 7 + 2) * PENT.length)], t, 0.06, 3.2);
+    } };
+  }
+  { // Lo-fi tranquilo
+    const CH = [[53, 57, 60, 64], [52, 55, 59, 62], [50, 53, 57, 60], [48, 52, 55, 59]];
+    const PENT = [72, 74, 77, 79, 81];
+    const E = 60 / 72 / 2;
+    styles.lofi = { eighth: E, play(s, t0) {
+      const bar = (s >> 3) & 3, j = s & 7, c = CH[bar], t = t0 + ((s & 1) ? 0.1 * E : 0);
+      if (j === 0) { c.forEach((m, i) => key(m + 12, t + i * 0.012, 0.05, 2.4)); key(c[0] - 12, t, 0.15, 1.8); }
+      if (j === 5) c.forEach((m, i) => key(m + 12, t + i * 0.01, 0.032, 1.2));
+      if (j === 3) key(c[0] - 12 + 7, t, 0.09, 1.0);
+      if (j === 6) key(c[0] - 12, t, 0.09, 1.0);
+      if (!(j & 1) && rnd(s * 5 + 1) < 0.22) key(PENT[Math.floor(rnd(s * 11) * PENT.length)], t, 0.05, 1.6);
+      if (j & 1) click(t, 0.006, 7000);
+      if (rnd(s * 3 + 4) < 0.25) click(t + rnd(s) * E, 0.008, 3000);
+    } };
+  }
+  { // 8 bits calminho
+    const BASS = [41, 43, 40, 45], TONES = [[65, 69, 72], [67, 71, 74], [64, 67, 71], [64, 69, 72]];
+    const MEL = [[81, 0, 79, 77, 79, 81, 84, 0], [83, 0, 81, 79, 81, 83, 86, 0], [79, 0, 76, 79, 83, 0, 81, 79], [81, 0, 84, 81, 79, 77, 76, 0]];
+    const E = 60 / 84 / 2;
+    styles.chip = { eighth: E, play(s, t) {
+      const bar = (s >> 3) & 3, j = s & 7, tn = TONES[bar];
+      if (!(j & 1)) perc(warm, BASS[bar] + (j === 4 ? 7 : 0), t, 0.16, E * 1.8, { type: 'triangle' });
+      else perc(warm, tn[(j >> 1) % 3], t, 0.022, E * 0.9, { type: 'square' });
+      if (MEL[bar][j]) perc(warm, MEL[bar][j], t, 0.04, E * 1.6, { type: 'square' });
+    } };
+  }
+  return {
+    nomes: { caixinha: 'Caixinha de música', piano: 'Piano suave', sonho: 'Sonho', lofi: 'Lo-fi tranquilo', chip: '8 bits calminho' },
+    player(name) {
+      const S = styles[name] || styles.caixinha; let t = 0, step = 0;
+      return { start(t0) { t = t0; step = 0; }, fill(until) { while (t < until) { S.play(step, t); t += S.eighth; step++; } } };
+    }
+  };
+}
+
+
+const TAU = Math.PI * 2, GOLD = 2.399963229728653;
+const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
+function mulberry(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+// materiais: 0 pétala, 1 folha, 2 caule, 3 papel, 4 filler, 5 pedestal, 6 fita, 7 genérico
+const MAT = { PETAL: 0, LEAF: 1, STEM: 2, PAPER: 3, FILLER: 4, PED: 5, RIBBON: 6, OBJ: 7 };
+// cores naturais: [matiz, nível de saturação (0 forte, 1 média, 2 suave)]
+const NAT = [[352,0],[330,1],[16,0],[48,0],[42,2],[130,1],[105,1],[36,1],[270,1],[270,2],[26,0],[46,0],[190,1],[206,0],[340,2]];
+
+class Builder {
+  constructor() { this.p = []; this.n = []; this.m = []; this.c = []; this.t = []; }
+  add(x, y, z, nx, ny, nz, m, c, t) {
+    this.p.push(x, y, z); this.n.push(nx, ny, nz); this.m.push(m); this.c.push(c); this.t.push(t);
+  }
+  get count() { return this.m.length; }
+}
+
+// superfície paramétrica amostrada em grade; normais por diferenças finitas
+function surface(B, nu, nv, fn, mat, col, tintFn, wrap) {
+  nu = Math.max(2, Math.round(nu)); nv = Math.max(2, Math.round(nv));
+  const W = nv + 1, P = new Float32Array((nu + 1) * W * 3), o = [0, 0, 0];
+  for (let i = 0; i <= nu; i++) for (let j = 0; j <= nv; j++) {
+    fn(i / nu, j / nv, o);
+    const k = (i * W + j) * 3; P[k] = o[0]; P[k + 1] = o[1]; P[k + 2] = o[2];
+  }
+  const at = (i, j) => {
+    i = i < 0 ? 0 : i > nu ? nu : i;
+    if (wrap) j = ((j % nv) + nv) % nv; else j = j < 0 ? 0 : j > nv ? nv : j;
+    return (i * W + j) * 3;
+  };
+  const jmax = wrap ? nv - 1 : nv;
+  for (let i = 0; i <= nu; i++) for (let j = 0; j <= jmax; j++) {
+    const a = at(i + 1, j), b = at(i - 1, j), c = at(i, j + 1), d = at(i, j - 1), k = at(i, j);
+    const ux = P[a] - P[b], uy = P[a + 1] - P[b + 1], uz = P[a + 2] - P[b + 2];
+    const vx = P[c] - P[d], vy = P[c + 1] - P[d + 1], vz = P[c + 2] - P[d + 2];
+    let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    const l = Math.hypot(nx, ny, nz);
+    if (l < 1e-9) continue;
+    B.add(P[k], P[k + 1], P[k + 2], nx / l, ny / l, nz / l, mat, col, tintFn ? tintFn(i / nu, j / nv) : 1);
+  }
+}
+
+function tube(B, path, radius, nu, nv, mat, col, tintFn) {
+  const p0 = [0, 0, 0], p1 = [0, 0, 0];
+  surface(B, nu, nv, (u, v, o) => {
+    path(u, p0);
+    path(Math.min(1, u + 0.002), p1);
+    path(Math.max(0, u - 0.002), o);
+    let tx = p1[0] - o[0], ty = p1[1] - o[1], tz = p1[2] - o[2];
+    const tl = Math.hypot(tx, ty, tz) || 1; tx /= tl; ty /= tl; tz /= tl;
+    let rx = 0, ry = 0, rz = 1; if (Math.abs(tz) > 0.9) { rx = 1; rz = 0; }
+    let nx = ry * tz - rz * ty, ny = rz * tx - rx * tz, nz = rx * ty - ry * tx;
+    const nl = Math.hypot(nx, ny, nz) || 1; nx /= nl; ny /= nl; nz /= nl;
+    const bx = ty * nz - tz * ny, by = tz * nx - tx * nz, bz = tx * ny - ty * nx;
+    const a = v * TAU, r = typeof radius === 'function' ? radius(u) : radius;
+    const ca = Math.cos(a) * r, sa = Math.sin(a) * r;
+    o[0] = p0[0] + nx * ca + bx * sa; o[1] = p0[1] + ny * ca + by * sa; o[2] = p0[2] + nz * ca + bz * sa;
+  }, mat, col, tintFn, true);
+}
+
+function bez(a, b, c) {
+  return (s, o) => {
+    const k0 = (1 - s) * (1 - s), k1 = 2 * s * (1 - s), k2 = s * s;
+    o[0] = k0 * a[0] + k1 * b[0] + k2 * c[0];
+    o[1] = k0 * a[1] + k1 * b[1] + k2 * c[1];
+    o[2] = k0 * a[2] + k1 * b[2] + k2 * c[2];
+  };
+}
+
+// transforma coordenadas locais da flor (z para cima) para o mundo (y para cima)
+function xform(pos, tilt, az, roll, s) {
+  const cr = Math.cos(roll), sr = Math.sin(roll), ct = Math.cos(tilt), st = Math.sin(tilt), ca = Math.cos(az), sa = Math.sin(az);
+  return (x, y, z, o) => {
+    const x1 = x * cr - y * sr, y1 = x * sr + y * cr;
+    const y2 = y1 * ct - z * st, z2 = y1 * st + z * ct;
+    const x3 = x1 * ca - y2 * sa, y3 = x1 * sa + y2 * ca;
+    o[0] = pos[0] + x3 * s; o[1] = pos[1] + z2 * s; o[2] = pos[2] + y3 * s;
+  };
+}
+
+function addPoint(B, T, lx, ly, lz, nx, ny, nz, mat, col, tint) {
+  const A = [0, 0, 0], C = [0, 0, 0], e = 0.01;
+  T(lx, ly, lz, A); T(lx + nx * e, ly + ny * e, lz + nz * e, C);
+  let wx = C[0] - A[0], wy = C[1] - A[1], wz = C[2] - A[2];
+  const l = Math.hypot(wx, wy, wz) || 1;
+  B.add(A[0], A[1], A[2], wx / l, wy / l, wz / l, mat, col, tint);
+}
+
+function petalShape(u) {
+  const a = 0.30 + 0.70 * Math.sin(Math.min(1, u / 0.55) * Math.PI / 2);
+  const e = u > 0.55 ? (u - 0.55) / 0.45 : 0;
+  return a * Math.sqrt(Math.max(0, 1 - e * e));
+}
+
+function addRose(B, T, nat, D, K, seed) {
+  const R = mulberry(seed);
+  for (let k = 0; k < K; k++) {
+    const t = K > 1 ? k / (K - 1) : 0, th = k * GOLD + (R() - 0.5) * 0.12;
+    const rb = 0.02 + 0.30 * Math.pow(t, 0.9), z0 = 0.10 - 0.30 * t, L = 0.30 + 0.38 * t;
+    const a0 = (4 + 62 * Math.pow(t, 1.3)) * Math.PI / 180, da = -0.35 + 1.35 * t;
+    const psi = 1.15 - 0.5 * t;
+    const NS = 32, tr = new Float32Array(NS + 1), tz = new Float32Array(NS + 1);
+    let r = rb, h = z0; tr[0] = r; tz[0] = h;
+    for (let q = 1; q <= NS; q++) {
+      const uu = (q - 0.5) / NS, a = a0 + da * uu * uu;
+      r += L / NS * Math.sin(a); h += L / NS * Math.cos(a); tr[q] = r; tz[q] = h;
+    }
+    const ph = R() * 6;
+    surface(B, 14 * D, 18 * D, (u, v, o) => {
+      const f = u * NS, q = Math.min(NS - 1, f | 0), w = f - q;
+      let rho = tr[q] * (1 - w) + tr[q + 1] * w, hh = tz[q] * (1 - w) + tz[q + 1] * w;
+      const s = petalShape(u), vv = v * 2 - 1, phi = th + vv * psi * s;
+      rho *= 1 + 0.12 * vv * vv * u;
+      hh += 0.06 * vv * vv * u * (0.4 + t) + 0.035 * t * u * u * u * Math.sin(vv * 6 + ph);
+      T(rho * Math.cos(phi), rho * Math.sin(phi), hh, o);
+    }, MAT.PETAL, nat, (u) => 0.22 + 0.78 * clamp(0.6 * Math.pow(u, 0.8) + 0.5 * t, 0, 1));
+  }
+  surface(B, 6 * D, 14 * D, (u, v, o) => {
+    const a = v * TAU, r = 0.22 * Math.pow(1 - u, 0.6) * (0.55 + 0.45 * Math.sin(u * Math.PI * 0.9 + 0.3));
+    T(r * Math.cos(a), r * Math.sin(a), -0.02 - 0.40 * u, o);
+  }, MAT.LEAF, 5, () => 0.8, true);
+}
+
+function addLeaf(B, bx, by, bz, az, el, len, wid, droop, D) {
+  const dx = Math.cos(az) * Math.cos(el), dy = Math.sin(el), dz = Math.sin(az) * Math.cos(el);
+  const sl = Math.hypot(dz, dx) || 1, sx = -dz / sl, sz = dx / sl;
+  const ux = -sz * dy, uy = sz * dx - sx * dz, uz = sx * dy;
+  surface(B, 14 * D, 8 * D, (u, v, o) => {
+    const vv = v * 2 - 1, w = wid * Math.pow(Math.sin(Math.PI * Math.pow(u, 0.75)), 0.85);
+    const along = len * u, dr = droop * u * u, fold = 0.5 * Math.abs(vv) * w;
+    o[0] = bx + dx * along + sx * vv * w + ux * fold;
+    o[1] = by + dy * along + uy * fold - dr;
+    o[2] = bz + dz * along + sz * vv * w + uz * fold;
+  }, MAT.LEAF, 5, (u, v) => 0.45 + 0.55 * (1 - 0.7 * Math.abs(v * 2 - 1)));
+}
+
+function addDaisy(B, T, o) {
+  const D = o.D, nc = Math.round(o.nc * D * D);
+  for (let i = 0; i < nc; i++) {
+    const fr = Math.sqrt((i + 0.5) / nc), r = o.rc * fr, a = i * GOLD, z = 0.32 * o.rc * (1 - fr * fr);
+    const nx = 0.64 * fr * Math.cos(a), ny = 0.64 * fr * Math.sin(a);
+    addPoint(B, T, r * Math.cos(a), r * Math.sin(a), z, nx, ny, 1, MAT.PETAL, o.cenCol, (0.45 + 0.55 * fr) * (0.7 + 0.3 * ((i % 21) < 11 ? 1 : 0.4)));
+  }
+  for (let row = 0; row < o.rows; row++) {
+    const lp = o.lp * (1 - 0.12 * row), off = row * Math.PI / o.petals;
+    for (let i = 0; i < o.petals; i++) {
+      const th = i * TAU / o.petals + off + 0.05 * Math.sin(i * 3.1 + row);
+      const ct = Math.cos(th), st = Math.sin(th);
+      surface(B, 8 * D, 6 * D, (u, v, out) => {
+        const vv = v * 2 - 1, rho = o.rc * 0.8 + lp * u;
+        const w = o.wp * Math.pow(Math.sin(Math.PI * (0.06 + 0.94 * Math.pow(u, 0.85))), 0.75);
+        const z = 0.10 * lp * Math.sin(Math.PI * Math.min(1, u * 0.8)) - 0.22 * lp * u * u - 0.012 * row - 0.25 * w * vv * vv;
+        T(rho * ct - vv * w * st, rho * st + vv * w * ct, z, out);
+      }, MAT.PETAL, o.petCol, (u) => 0.55 + 0.45 * u);
+    }
+  }
+}
+
+function addFiller(B, cx, cy, cz, D, seed) {
+  const R = mulberry(seed);
+  for (let p = 0; p < 6; p++) {
+    const px = cx + (R() - 0.5) * 0.12, py = cy + (R() - 0.5) * 0.10, pz = cz + (R() - 0.5) * 0.12, rr = 0.018 + 0.016 * R();
+    const n = Math.round(14 * D * D);
+    for (let i = 0; i < n; i++) {
+      const y = 1 - 2 * (i + 0.5) / n, r = Math.sqrt(1 - y * y), a = i * GOLD;
+      const nx = r * Math.cos(a), nz = r * Math.sin(a);
+      B.add(px + nx * rr, py + y * rr, pz + nz * rr, nx, y, nz, MAT.FILLER, 9, 0.6 + 0.4 * R());
+    }
+  }
+}
+
+function addSphere(B, c, rr, n, mat, col) {
+  for (let i = 0; i < n; i++) {
+    const y = 1 - 2 * (i + 0.5) / n, r = Math.sqrt(1 - y * y), a = i * GOLD;
+    const nx = r * Math.cos(a), nz = r * Math.sin(a);
+    B.add(c[0] + nx * rr, c[1] + y * rr, c[2] + nz * rr, nx, y, nz, mat, col, 0.9);
+  }
+}
+
+function buildBouquet(D, o) {
+  o = o || {}; const RC = o.rose;
+  const B = new Builder(), R = mulberry(7), G = [0, -0.95, 0];
+  const heads = [{ p: [0, 0.78, 0], phi: 0, tilt: 0.0, s: 0.33, type: 'rose', nat: RC != null ? RC : 0 }];
+  const natsR = RC != null ? [RC, RC, RC, RC, RC, RC] : [0, 1, 0, 2, 1, 0];
+  for (let i = 0; i < 6; i++) {
+    const a = i * TAU / 6 + 0.3;
+    heads.push({ p: [Math.cos(a) * 0.55, 0.60 + 0.05 * R(), Math.sin(a) * 0.55], phi: a, tilt: 0.55 + 0.15 * R(), s: 0.29 + 0.03 * R(), type: 'rose', nat: natsR[i] });
+  }
+  for (let i = 0; i < 5; i++) {
+    const a = i * TAU / 5 + 0.9;
+    heads.push({ p: [Math.cos(a) * 0.95, 0.36 + 0.06 * R(), Math.sin(a) * 0.95], phi: a, tilt: 0.95, s: 1.0, type: 'daisy' });
+  }
+  heads.forEach((h, idx) => {
+    const T = xform(h.p, h.tilt, h.phi + Math.PI / 2, R() * TAU, h.s), base = [0, 0, 0];
+    if (h.type === 'rose') {
+      addRose(B, T, h.nat, D, 24, 100 + idx);
+      T(0, 0, -0.38, base);
+    } else {
+      addDaisy(B, T, { D, petals: 13, rows: 1, lp: 0.20, wp: 0.045, rc: 0.08, petCol: 4, cenCol: 3, nc: 140 });
+      T(0, 0, -0.02, base);
+    }
+    const p1 = [base[0] * 0.75, (base[1] + G[1]) / 2 + 0.05, base[2] * 0.75];
+    const p2 = [G[0] + (R() - 0.5) * 0.05, G[1], G[2] + (R() - 0.5) * 0.05];
+    tube(B, bez(base, p1, p2), 0.013, 40 * D, 6, MAT.STEM, 6, () => 0.8);
+  });
+  for (let i = 0; i < 8; i++) {
+    const a = i * TAU / 8 + 0.2;
+    addLeaf(B, Math.cos(a) * 0.42, 0.12, Math.sin(a) * 0.42, a, 0.5, 0.55, 0.13, 0.12, D);
+  }
+  for (let i = 0; i < 6; i++) {
+    const a = i * TAU / 6 + 0.7;
+    addLeaf(B, Math.cos(a) * 0.55, 0.28, Math.sin(a) * 0.55, a, 0.85, 0.45, 0.11, 0.08, D);
+  }
+  for (let i = 0; i < 14; i++) {
+    const a = R() * TAU, r = 0.78 + 0.35 * R(), y = 0.45 + 0.5 * R();
+    const c = [Math.cos(a) * r, y, Math.sin(a) * r];
+    addFiller(B, c[0], c[1], c[2], D, 300 + i);
+    const tb = [c[0] * 0.5, 0.2, c[2] * 0.5];
+    tube(B, (s, o) => { o[0] = tb[0] + (c[0] - tb[0]) * s; o[1] = tb[1] + (c[1] - tb[1]) * s; o[2] = tb[2] + (c[2] - tb[2]) * s; }, 0.006, 14 * D, 4, MAT.STEM, 6, () => 0.7);
+  }
+  const coneR = (y) => 0.85 * (y + 1.2) / 1.3;
+  surface(B, 26 * D, 80 * D, (u, v, o) => {
+    const a = v * TAU; let y = -1.2 + 1.3 * u, r = 0.85 * u;
+    y += 0.09 * Math.pow(u, 6) * Math.sin(a * 5);
+    r *= 1 + 0.06 * Math.sin(a * 9) * u;
+    o[0] = r * Math.cos(a); o[1] = y; o[2] = r * Math.sin(a);
+  }, MAT.PAPER, 7, (u) => 0.35 + 0.65 * u, true);
+  surface(B, 4 * D, 90 * D, (u, v, o) => {
+    const a = v * TAU, y = -0.62 + 0.12 * u, r = coneR(y) + 0.012;
+    o[0] = r * Math.cos(a); o[1] = y; o[2] = r * Math.sin(a);
+  }, MAT.RIBBON, 8, () => 0.9, true);
+  const bc = [0, -0.55, coneR(-0.55) + 0.03];
+  for (const side of [-1, 1]) {
+    tube(B, (s, o) => {
+      o[0] = bc[0] + side * 0.085 * (1 - Math.cos(s * TAU));
+      o[1] = bc[1] + 0.075 * Math.sin(s * TAU);
+      o[2] = bc[2] + 0.02 * Math.sin(s * Math.PI);
+    }, 0.022, 36 * D, 6, MAT.RIBBON, 8, () => 0.95);
+    tube(B, bez(bc, [bc[0] + side * 0.05, bc[1] - 0.1, bc[2] + 0.04], [bc[0] + side * 0.1, bc[1] - 0.22, bc[2] + 0.02]), 0.02, 20 * D, 6, MAT.RIBBON, 8, () => 0.9);
+  }
+  addSphere(B, bc, 0.035, Math.round(120 * D), MAT.RIBBON, 8);
+  return B;
+}
+
+function buildRose(D, o) {
+  o = o || {};
+  const B = new Builder(), T = xform([0, 0.55, 0], 0.85, Math.PI, 0.6, 0.62), base = [0, 0, 0];
+  addRose(B, T, o.rose != null ? o.rose : 0, D * 1.25, 34, 21);
+  T(0, 0, -0.42, base);
+  const end = [0.05, -1.05, 0], mid = [base[0] - 0.12, -0.2, base[2] - 0.1], path = bez(base, mid, end);
+  tube(B, path, 0.032, 70 * D, 8, MAT.STEM, 6, () => 0.8);
+  const q = [0, 0, 0];
+  path(0.45, q); addLeaf(B, q[0], q[1], q[2], 0.2, 0.45, 0.5, 0.14, 0.12, D);
+  path(0.72, q); addLeaf(B, q[0], q[1], q[2], Math.PI + 0.3, 0.4, 0.5, 0.14, 0.12, D);
+  return B;
+}
+
+function buildSunflower(D) {
+  const B = new Builder(), T = xform([0, 0.5, 0], 1.25, Math.PI, 0.3, 1.0), base = [0, 0, 0];
+  addDaisy(B, T, { D, petals: 21, rows: 2, lp: 0.40, wp: 0.085, rc: 0.42, petCol: 11, cenCol: 10, nc: 3200 });
+  T(0, 0, -0.1, base);
+  const end = [0, -1.2, -0.2], path = bez(base, [base[0], -0.4, base[2] - 0.3], end);
+  tube(B, path, 0.045, 70 * D, 8, MAT.STEM, 6, () => 0.8);
+  const q = [0, 0, 0];
+  path(0.55, q); addLeaf(B, q[0], q[1], q[2], 0.0, 0.35, 0.7, 0.26, 0.22, D);
+  path(0.8, q); addLeaf(B, q[0], q[1], q[2], Math.PI, 0.3, 0.7, 0.26, 0.22, D);
+  return B;
+}
+
+const dirOf = (tilt, az) => [Math.sin(tilt) * Math.sin(az), Math.cos(tilt), -Math.sin(tilt) * Math.cos(az)];
+const sub3 = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+
+// estame: filamento fino com antera na ponta
+function addStamen(B, O, ctrl, end, rad, antherR, col, D) {
+  tube(B, bez(O, ctrl, end), rad, 26 * D, 5, MAT.PETAL, col, () => 0.85);
+  addSphere(B, end, antherR, Math.round(30 * D * D), MAT.PETAL, 2);
+}
+
+// lírio: 6 tépalas (3 internas largas, 3 externas estreitas) recurvadas, estames e pistilo
+function addLily(B, T, D, seed, s) {
+  const R = mulberry(seed);
+  for (let k = 0; k < 6; k++) {
+    const inner = k % 2 === 0, th = k * TAU / 6 + (R() - 0.5) * 0.08;
+    const L = inner ? 1.0 : 0.95, Wd = inner ? 0.30 : 0.20, a0 = inner ? 0.42 : 0.52, a1 = inner ? 2.05 : 1.75;
+    const NS = 28, tr = new Float32Array(NS + 1), tz = new Float32Array(NS + 1);
+    let r = 0.02, h = 0; tr[0] = r; tz[0] = h;
+    for (let q = 1; q <= NS; q++) {
+      const uu = (q - 0.5) / NS, a = a0 + (a1 - a0) * Math.pow(uu, 1.4);
+      r += L / NS * Math.sin(a); h += L / NS * Math.cos(a); tr[q] = r; tz[q] = h;
+    }
+    const ph = R() * 6, ct = Math.cos(th), st = Math.sin(th);
+    surface(B, 18 * D, 12 * D, (u, v, o) => {
+      const f = u * NS, q = Math.min(NS - 1, f | 0), w = f - q;
+      const rho = tr[q] * (1 - w) + tr[q + 1] * w, hh = tz[q] * (1 - w) + tz[q + 1] * w;
+      const vv = v * 2 - 1;
+      const width = Wd * Math.pow(Math.sin(Math.PI * Math.min(1, 0.12 + 0.88 * Math.pow(u, 0.75))), 0.9);
+      const lat = vv * width;
+      const z = hh - 0.38 * width * vv * vv + 0.05 * Math.sin(u * 11 + ph) * width * Math.abs(vv);
+      T(rho * ct - lat * st, rho * st + lat * ct, z, o);
+    }, MAT.PETAL, 14, (u, v) => (0.5 + 0.5 * Math.pow(u, 0.6)) * (1 - 0.18 * Math.abs(v * 2 - 1)));
+  }
+  const O = [0, 0, 0], Ax = [0, 0, 0], Lp = [0, 0, 0];
+  T(0, 0, 0, O); T(0, 0, 1, Ax);
+  const axv = sub3(Ax, O);
+  for (let k = 0; k < 6; k++) {
+    const th = k * TAU / 6 + 0.35; T(0.07 * Math.cos(th), 0.07 * Math.sin(th), 0, Lp);
+    const lat = sub3(Lp, O);
+    const ctrl = [O[0] + axv[0] * 0.4 + lat[0] * 0.8, O[1] + axv[1] * 0.4 + lat[1] * 0.8, O[2] + axv[2] * 0.4 + lat[2] * 0.8];
+    const end = [O[0] + axv[0] * 0.72 + lat[0] * 2.6, O[1] + axv[1] * 0.72 + lat[1] * 2.6 - 0.02 * s, O[2] + axv[2] * 0.72 + lat[2] * 2.6];
+    addStamen(B, O, ctrl, end, 0.006 * s, 0.045 * s, 6, D);
+  }
+  const pe = [O[0] + axv[0] * 0.95, O[1] + axv[1] * 0.95, O[2] + axv[2] * 0.95];
+  tube(B, bez(O, [O[0] + axv[0] * 0.5, O[1] + axv[1] * 0.5, O[2] + axv[2] * 0.5], pe), 0.009 * s, 26 * D, 5, MAT.STEM, 6, () => 0.9);
+  addSphere(B, pe, 0.035 * s, Math.round(30 * D * D), MAT.STEM, 6);
+}
+
+function addBud(B, T, D, len) {
+  surface(B, 16 * D, 24 * D, (u, v, o) => {
+    const a = v * TAU, r = 0.17 * Math.pow(Math.sin(Math.PI * Math.pow(u, 0.8)), 0.9) * (1 + 0.1 * Math.cos(3 * a));
+    T(r * Math.cos(a), r * Math.sin(a), len * u, o);
+  }, MAT.LEAF, 6, (u) => 0.55 + 0.45 * u, true);
+}
+
+function buildLily(D) {
+  const B = new Builder(), g = [0, -0.8, 0], top = [0.14, 0.5, 0.04], stem = bez(g, [-0.1, -0.2, 0.02], top);
+  tube(B, stem, 0.022, 70 * D, 8, MAT.STEM, 6, () => 0.8);
+  addLily(B, xform(top, 0.45, 1.45, 0.3, 0.95), D, 31, 0.95);
+  const q = [0, 0, 0];
+  // flor lateral num pedúnculo
+  stem(0.58, q); const P = q.slice(), Q = [P[0] - 0.5, P[1] + 0.2, P[2] + 0.05];
+  tube(B, bez(P, [P[0] - 0.15, P[1] + 0.14, P[2]], Q), 0.014, 30 * D, 6, MAT.STEM, 6, () => 0.8);
+  addLily(B, xform(Q, 1.1, -Math.PI / 2, 1.0, 0.8), D, 47, 0.8);
+  // botões
+  stem(0.62, q); const P2 = q.slice(), Q2 = [P2[0] + 0.05, P2[1] + 0.22, P2[2] - 0.32];
+  tube(B, bez(P2, [P2[0], P2[1] + 0.15, P2[2] - 0.15], Q2), 0.012, 24 * D, 6, MAT.STEM, 6, () => 0.8);
+  addBud(B, xform(Q2, 0.6, 0, 0, 0.72), D, 0.9);
+  stem(0.42, q); const P3 = q.slice(), Q3 = [P3[0] + 0.05, P3[1] + 0.2, P3[2] + 0.3];
+  tube(B, bez(P3, [P3[0], P3[1] + 0.14, P3[2] + 0.12], Q3), 0.012, 24 * D, 6, MAT.STEM, 6, () => 0.8);
+  addBud(B, xform(Q3, 0.6, Math.PI, 0, 0.62), D, 0.9);
+  // folhas lanceoladas em espiral
+  for (let i = 0; i < 14; i++) {
+    const s = 0.05 + 0.047 * i; stem(s, q);
+    addLeaf(B, q[0], q[1], q[2], i * 2.4, 0.5 - 0.02 * i, 0.62 - 0.36 * s, 0.055, 0.09, D);
+  }
+  return B;
+}
+
+// spider lily (Lycoris radiata): umbela sem folhas, tépalas finas e onduladas, estames muito longos
+function addSpiderFlower(B, T, D, seed, s) {
+  const R = mulberry(seed);
+  for (let k = 0; k < 6; k++) {
+    const th = k * TAU / 6 + (R() - 0.5) * 0.1, L = 0.5, a0 = 0.95, a1 = 2.6;
+    const NS = 26, tr = new Float32Array(NS + 1), tz = new Float32Array(NS + 1);
+    let r = 0.01, h = 0; tr[0] = r; tz[0] = h;
+    for (let q = 1; q <= NS; q++) {
+      const uu = (q - 0.5) / NS, a = a0 + (a1 - a0) * Math.pow(uu, 1.2);
+      r += L / NS * Math.sin(a); h += L / NS * Math.cos(a); tr[q] = r; tz[q] = h;
+    }
+    const ph = R() * 6, ct = Math.cos(th), st = Math.sin(th);
+    surface(B, 18 * D, 5 * D, (u, v, o) => {
+      const f = u * NS, q = Math.min(NS - 1, f | 0), w = f - q;
+      const rho = tr[q] * (1 - w) + tr[q + 1] * w, hh = tz[q] * (1 - w) + tz[q + 1] * w;
+      const vv = v * 2 - 1;
+      const width = 0.05 * Math.pow(Math.sin(Math.PI * Math.min(1, 0.1 + 0.9 * Math.pow(u, 0.8))), 0.8) * (1 + 0.35 * Math.sin(u * 22 + ph));
+      const lat = vv * width, z = hh + 0.035 * Math.sin(u * 15 + ph * 1.7) * (0.3 + u) - 0.2 * width * vv * vv;
+      T(rho * ct - lat * st, rho * st + lat * ct, z, o);
+    }, MAT.PETAL, 0, (u) => 0.5 + 0.5 * Math.pow(u, 0.5));
+  }
+  const O = [0, 0, 0], Ax = [0, 0, 0], Lp = [0, 0, 0];
+  T(0, 0, 0, O); T(0, 0, 1, Ax);
+  const axv = sub3(Ax, O);
+  for (let k = 0; k < 6; k++) {
+    const th = k * TAU / 6 + 0.4 + (R() - 0.5) * 0.3; T(0.06 * Math.cos(th), 0.06 * Math.sin(th), 0, Lp);
+    const lat = sub3(Lp, O), lenK = 1.0 + 0.1 * R();
+    const ctrl = [O[0] + axv[0] * 0.5 + lat[0] * 1.2, O[1] + axv[1] * 0.5 + lat[1] * 1.2, O[2] + axv[2] * 0.5 + lat[2] * 1.2];
+    const end = [O[0] + axv[0] * lenK + lat[0] * 4.0, O[1] + axv[1] * lenK + lat[1] * 4.0 + 0.2 * s, O[2] + axv[2] * lenK + lat[2] * 4.0];
+    addStamen(B, O, ctrl, end, 0.0055, 0.014, 0, D);
+  }
+  const pe = [O[0] + axv[0] * 1.2, O[1] + axv[1] * 1.2 + 0.12 * s, O[2] + axv[2] * 1.2];
+  tube(B, bez(O, [O[0] + axv[0] * 0.6, O[1] + axv[1] * 0.6 + 0.03 * s, O[2] + axv[2] * 0.6], pe), 0.006, 26 * D, 5, MAT.PETAL, 0, () => 0.9);
+}
+
+function buildSpider(D) {
+  const B = new Builder(), R = mulberry(9), g = [0, -0.7, 0], top = [0, 0.3, 0];
+  tube(B, bez(g, [0.04, -0.25, 0.02], top), 0.026, 70 * D, 8, MAT.STEM, 6, () => 0.8);
+  addSphere(B, top, 0.05, Math.round(90 * D), MAT.STEM, 6);
+  const n = 8;
+  for (let k = 0; k < n; k++) {
+    const az = k === 0 ? 0.3 : (k - 1) * TAU / (n - 1) + 0.4 * R(), tilt = k === 0 ? 0.35 : 0.95 + 0.4 * R();
+    const d = dirOf(tilt, az), Q = [top[0] + d[0] * 0.3, top[1] + d[1] * 0.3 + 0.03, top[2] + d[2] * 0.3];
+    tube(B, bez(top, [top[0] + d[0] * 0.08, top[1] + d[1] * 0.1, top[2] + d[2] * 0.08], Q), 0.011, 24 * D, 6, MAT.STEM, 6, () => 0.8);
+    addSpiderFlower(B, xform(Q, tilt, az, R() * TAU, 1.1), D, 60 + k, 1.1);
+  }
+  return B;
+}
+
+function parseOBJ(text) {
+  const V = [], F = [];
+  for (const ln of text.split(/\r?\n/)) {
+    const c0 = ln.charCodeAt(0), c1 = ln.charCodeAt(1);
+    if (c0 === 118 && c1 === 32) {
+      const t = ln.trim().split(/\s+/); V.push(+t[1], +t[2], +t[3]);
+    } else if (c0 === 102 && c1 === 32) {
+      const ids = ln.trim().split(/\s+/).slice(1).map(s => { const n = parseInt(s, 10); return n < 0 ? V.length / 3 + n : n - 1; });
+      for (let k = 1; k < ids.length - 1; k++) F.push(ids[0], ids[k], ids[k + 1]);
+    }
+  }
+  const nV = V.length / 3;
+  if (nV < 3 || F.length < 3) throw new Error('O arquivo não tem vértices e faces suficientes.');
+  for (let i = 0; i < V.length; i++) if (!Number.isFinite(V[i])) throw new Error('O arquivo tem coordenadas inválidas.');
+  for (let i = 0; i < F.length; i++) if (!(F[i] >= 0 && F[i] < nV)) throw new Error('O arquivo tem faces que apontam para vértices inexistentes.');
+  return { V: Float32Array.from(V), F: Uint32Array.from(F) };
+}
+
+function sampleOBJ(M, P) {
+  const { V, F } = M, nT = F.length / 3, area = new Float32Array(nT);
+  let total = 0;
+  for (let t = 0; t < nT; t++) {
+    const a = F[t * 3] * 3, b = F[t * 3 + 1] * 3, c = F[t * 3 + 2] * 3;
+    const ux = V[b] - V[a], uy = V[b + 1] - V[a + 1], uz = V[b + 2] - V[a + 2];
+    const vx = V[c] - V[a], vy = V[c + 1] - V[a + 1], vz = V[c + 2] - V[a + 2];
+    area[t] = 0.5 * Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx);
+    total += area[t];
+  }
+  if (!(total > 0)) throw new Error('O modelo não tem superfície para desenhar.');
+  const B = new Builder(), R = mulberry(11);
+  for (let t = 0; t < nT; t++) {
+    const ex = area[t] / total * P, cnt = Math.floor(ex) + (R() < ex % 1 ? 1 : 0);
+    if (!cnt) continue;
+    const a = F[t * 3] * 3, b = F[t * 3 + 1] * 3, c = F[t * 3 + 2] * 3;
+    const ux = V[b] - V[a], uy = V[b + 1] - V[a + 1], uz = V[b + 2] - V[a + 2];
+    const vx = V[c] - V[a], vy = V[c + 1] - V[a + 1], vz = V[c + 2] - V[a + 2];
+    let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    const l = Math.hypot(nx, ny, nz) || 1; nx /= l; ny /= l; nz /= l;
+    for (let q = 0; q < cnt; q++) {
+      const s = Math.sqrt(R()), r2 = R(), wa = 1 - s, wb = s * (1 - r2), wc = s * r2;
+      B.add(V[a] * wa + V[b] * wb + V[c] * wc, V[a + 1] * wa + V[b + 1] * wb + V[c + 1] * wc, V[a + 2] * wa + V[b + 2] * wb + V[c + 2] * wc, nx, ny, nz, MAT.OBJ, 4, 1);
+    }
+  }
+  return B;
+}
+
+// centraliza, normaliza para raio 1 e acrescenta o pedestal holográfico
+function finalize(B, D) {
+  const n = B.count, p = Float32Array.from(B.p);
+  if (!n) throw new Error('Modelo vazio.');
+  let x0 = 1e9, y0 = 1e9, z0 = 1e9, x1 = -1e9, y1 = -1e9, z1 = -1e9;
+  for (let i = 0; i < n; i++) {
+    const x = p[i * 3], y = p[i * 3 + 1], z = p[i * 3 + 2];
+    if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; if (z < z0) z0 = z; if (z > z1) z1 = z;
+  }
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, cz = (z0 + z1) / 2;
+  let rad = 0;
+  for (let i = 0; i < n; i++) {
+    const d = Math.hypot(p[i * 3] - cx, p[i * 3 + 1] - cy, p[i * 3 + 2] - cz); if (d > rad) rad = d;
+  }
+  rad = rad || 1;
+  let minY = 1e9;
+  for (let i = 0; i < n; i++) {
+    p[i * 3] = (p[i * 3] - cx) / rad; p[i * 3 + 1] = (p[i * 3 + 1] - cy) / rad; p[i * 3 + 2] = (p[i * 3 + 2] - cz) / rad;
+    if (p[i * 3 + 1] < minY) minY = p[i * 3 + 1];
+  }
+  const ped = [], rings = [0.42, 0.72, 1.0], py = minY - 0.07;
+  for (const r of rings) {
+    const cnt = Math.round(TAU * r * 160 * D);
+    for (let i = 0; i < cnt; i++) { const a = i / cnt * TAU; ped.push(r * Math.cos(a), py, r * Math.sin(a), i / cnt); }
+  }
+  for (let k = 0; k < 24; k++) {
+    const a = k / 24 * TAU;
+    for (let q = 0; q < 8; q++) { const r = 0.95 + 0.13 * q / 7; ped.push(r * Math.cos(a), py, r * Math.sin(a), k / 24); }
+  }
+  const m = ped.length / 4, total = n + m;
+  const pos = new Float32Array(total * 3), nor = new Float32Array(total * 3);
+  const mat = new Uint8Array(total), col = new Uint8Array(total), tint = new Float32Array(total);
+  pos.set(p); nor.set(B.n);
+  for (let i = 0; i < n; i++) { mat[i] = B.m[i]; col[i] = B.c[i]; tint[i] = B.t[i]; }
+  for (let i = 0; i < m; i++) {
+    const k = n + i;
+    pos[k * 3] = ped[i * 4]; pos[k * 3 + 1] = ped[i * 4 + 1]; pos[k * 3 + 2] = ped[i * 4 + 2];
+    nor[k * 3 + 1] = 1; mat[k] = MAT.PED; col[k] = 12; tint[k] = ped[i * 4 + 3];
+  }
+  return { pos, nor, mat, col, tint, base: n, count: total, D };
+}
+
+
+const RAMPS = {
+  classic: ' .:-=+*#%@',
+  detailed: ' .\'`^",:;Il!i><~+_-?][}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$',
+  blocks: ' ░▒▓█',
+  code: ' .,;:+x01%#@'
+};
+const MODELOS = { bouquet: 'Buquê', rose: 'Rosa', sunflower: 'Girassol', lily: 'Lírio', spider: 'Spider lily' };
+const DEF = { capa: 'Tenho uma coisa para você' };
+// letra da mensagem: [família no Google Fonts, pilha CSS, tamanho em px]
+const LETRAS = {
+  manuscrita: ['Caveat:wght@500;700', '"Caveat", "Segoe Print", "Bradley Hand", cursive', 27],
+  caderno: ['Patrick+Hand', '"Patrick Hand", "Segoe Print", "Comic Sans MS", cursive', 20],
+  cursiva: ['Dancing+Script:wght@500;700', '"Dancing Script", "Brush Script MT", cursive', 23],
+  serifa: ['Fraunces:opsz,wght@9..144,500;9..144,700', '"Fraunces", Georgia, "Times New Roman", serif', 19],
+  moderna: ['Space+Grotesk:wght@500;700', '"Space Grotesk", system-ui, sans-serif', 18],
+  maquina: ['IBM+Plex+Mono:wght@400;500', '"IBM Plex Mono", ui-monospace, Menlo, monospace', 16]
+};
+
+function sanitize(raw) {
+  const r = (raw && typeof raw === 'object') ? raw : {};
+  const str = (v, max) => (typeof v === 'string' ? v : '').slice(0, max);
+  const bool = (v, d) => (typeof v === 'boolean' ? v : d);
+  const one = (v, list, d) => (list.indexOf(v) >= 0 ? v : d);
+  const arr = (v, n) => (Array.isArray(v) ? v.slice(0, n) : []);
+  const C = {};
+  C.tema = one(r.tema, ['noite', 'papel'], 'noite');
+  C.letra = one(r.letra, Object.keys(LETRAS), 'caderno');
+  C.capa = str(r.capa, 120) || DEF.capa;
+  C.para = str(r.para, 80); C.data = str(r.data, 60); C.assinatura = str(r.assinatura, 120);
+  C.mensagem = arr(r.mensagem, 12).map((p) => str(p, 1200)).filter(Boolean);
+  C.flores = arr(r.flores, 5).filter((k) => MODELOS[k]);
+  if (!C.flores.length) C.flores = ['bouquet'];
+  C.corRosa = (Number.isInteger(r.corRosa) && r.corRosa >= 0 && r.corRosa < NAT.length) ? r.corRosa : null;
+  C.paleta = one(r.paleta, ['holo', 'natural', 'green', 'amber'], 'holo');
+  C.caracteres = one(r.caracteres, Object.keys(RAMPS), 'detailed');
+  C.fonte = (Number.isInteger(r.fonte) && r.fonte >= 7 && r.fonte <= 16) ? r.fonte : 0;
+  C.brilho = bool(r.brilho, true); C.contornos = bool(r.contornos, true); C.girar = bool(r.girar, true); C.crescer = bool(r.crescer, true);
+  C.particulas = one(r.particulas, ['nenhuma', 'petalas', 'coracoes', 'brilhos'], 'brilhos');
+  C.musica = one(r.musica, ['nenhuma', 'caixinha', 'piano', 'sonho', 'lofi', 'chip'], 'caixinha');
+  C.verificacao = arr(r.verificacao, 4).map((q) => {
+    if (!q || typeof q !== 'object') return null;
+    const h = arr(q.h, 8).filter((x) => typeof x === 'string').map((x) => x.slice(0, 20));
+    if (!h.length) return null;
+    return { t: q.t === 'd' ? 'd' : 'x', q: str(q.q, 160), h, d: str(q.d, 160) };
+  }).filter(Boolean);
+  C.guia = arr(r.guia, 12).map((p) => str(p, 160)).filter(Boolean);
+  C.retorno = (r.retorno && typeof r.retorno === 'object') ? { num: String(r.retorno.num || '').replace(/\D/g, '').slice(0, 15) } : null;
+  C.opcoes = bool(r.opcoes, true); C.divulgar = bool(r.divulgar, true);
+  C.site = str(r.site, 300); C.previa = r.previa === true;
+  return C;
+}
+
+async function carregar() {
+  if (CARTA) return sanitize(CARTA);
+  const m = /^#c=(.+)$/.exec(location.hash);
+  if (!m) throw new Error('sem-carta');
+  return sanitize(await Codec.decode(m[1]));
+}
+
+(async () => {
+  let C;
+  try { C = await carregar(); }
+  catch (e) { document.getElementById('broken').hidden = false; return; }
+  document.getElementById('app').hidden = false;
+  iniciar(C);
+})();
+
+function iniciar(C) {
+  const $ = (id) => document.getElementById(id);
+  document.documentElement.dataset.tema = C.tema === 'papel' ? 'papel' : 'noite';
+  const L = LETRAS[C.letra] || LETRAS.caderno, rs = document.documentElement.style;
+  rs.setProperty('--letra', L[1]); rs.setProperty('--fs', L[2] + 'px');
+  if (L[0]) { const lk = document.createElement('link'); lk.rel = 'stylesheet'; lk.href = 'https://fonts.googleapis.com/css2?family=' + L[0] + '&display=swap'; document.head.appendChild(lk); }
+  document.title = C.para ? 'Uma carta para ' + C.para : 'Uma carta para você';
+  const reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const FONT = '"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace';
+  const canvas = $('c'), stage = $('stage'), ctx = canvas.getContext('2d', { alpha: false });
+  const EDGE = ['-', '\\', '|', '/'];
+  const SAT = [88, 58, 26], HB = 24, ROWS = HB * 3;
+  const MATB = [1, 0.8, 0.7, 0.75, 1, 1, 0.95, 1], SPEC = [0.35, 0.5, 0.25, 0.1, 0.15, 0, 0.6, 0.25];
+  const BAY = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+  const BG = '#03070a'; // o palco das flores é sempre escuro; o tema só muda a folha
+  const mobile = window.innerWidth < 700;
+  const S = {
+    model: C.flores[0], font: C.fonte || (mobile ? 7 : 9), pal: C.paleta, ramp: C.caracteres, auto: C.girar && !reduced,
+    edges: C.contornos, fx: C.brilho, zoom: 1.2, yaw: 0.5, pitch: 0.22, yawV: 0, pitchV: 0, dragging: false
+  };
+  let ramp = RAMPS[S.ramp], N = ramp.length, tileTotal = N + 12;
+  let dpr = 1, W = 0, H = 0, cw = 6, ch = 11, cols = 0, rows = 0, offX = 0, offY = 0;
+  let zbuf, ibuf, cellCol, cellRow, cellB;
+  const atlas = document.createElement('canvas'), bloomA = document.createElement('canvas'), bloomB = document.createElement('canvas');
+  let actx, built, M = null, ready = false, buildTimer = 0, revealed = false, growT0 = null;
+  const GROW = 3.4, ease = (x) => 1 - Math.pow(1 - x, 3);
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cw = Math.max(3, Math.round(S.font * 0.6 * dpr)); ch = Math.max(5, Math.round(S.font * 1.2 * dpr));
+    const r = stage.getBoundingClientRect();
+    W = Math.max(2, Math.round(r.width * dpr)); H = Math.max(2, Math.round(r.height * dpr));
+    canvas.width = W; canvas.height = H;
+    cols = Math.max(1, Math.floor(W / cw)); rows = Math.max(1, Math.floor(H / ch));
+    offX = ((W - cols * cw) / 2) | 0; offY = ((H - rows * ch) / 2) | 0;
+    const n = cols * rows;
+    zbuf = new Float32Array(n); ibuf = new Int32Array(n); cellCol = new Int16Array(n); cellRow = new Uint8Array(n); cellB = new Float32Array(n);
+    bloomA.width = Math.max(2, W >> 2); bloomA.height = Math.max(2, H >> 2);
+    bloomB.width = Math.max(2, W >> 3); bloomB.height = Math.max(2, H >> 3);
+    buildAtlas(); initParts();
+  }
+  function buildAtlas() {
+    ramp = RAMPS[S.ramp]; N = ramp.length; tileTotal = N + 12;
+    atlas.width = tileTotal * cw; atlas.height = ROWS * ch;
+    actx = atlas.getContext('2d'); built = new Uint8Array(tileTotal * ROWS);
+  }
+  function ensureTile(col, row) {
+    const key = row * tileTotal + col;
+    if (built[key]) return;
+    built[key] = 1;
+    const hue = ((row / 3) | 0) * 15, sat = SAT[row % 3];
+    let L, chr;
+    if (col < N) { const t = Math.pow(col / (N - 1), 0.85); L = 20 + 62 * t; chr = ramp[col]; }
+    else { const lv = (col - N) % 3; L = 50 + 15 * lv; chr = EDGE[((col - N) / 3) | 0]; }
+    actx.save();
+    actx.beginPath(); actx.rect(col * cw, row * ch, cw, ch); actx.clip();
+    actx.font = `500 ${Math.round(S.font * dpr)}px ${FONT}`;
+    actx.textAlign = 'center'; actx.textBaseline = 'middle';
+    actx.fillStyle = `hsl(${hue} ${sat}% ${L}%)`;
+    actx.fillText(chr, col * cw + cw / 2, row * ch + ch / 2 + ch * 0.04);
+    actx.restore();
+  }
+  const densityNow = () => Math.round(clamp(Math.sqrt(cols * rows) / 105, 0.75, mobile ? 1.3 : 1.7) * 10) / 10;
+  const BUILDERS = { bouquet: buildBouquet, rose: buildRose, sunflower: buildSunflower, lily: buildLily, spider: buildSpider };
+  function buildModel() {
+    const D = densityNow();
+    M = finalize(BUILDERS[S.model](D, { rose: C.corRosa }), D);
+    let a = 1e9, b = -1e9;
+    for (let i = 0; i < M.base; i++) { const y = M.pos[i * 3 + 1]; if (y < a) a = y; if (y > b) b = y; }
+    M.yMin = a; M.yMax = b;
+  }
+  function scheduleBuild(regrow) {
+    clearTimeout(buildTimer);
+    buildTimer = setTimeout(() => { buildModel(); if (regrow && revealed) growT0 = performance.now() / 1000; }, 20);
+  }
+
+  const L1 = (() => { const x = -0.5, y = 0.7, z = 0.6, l = Math.hypot(x, y, z); return [x / l, y / l, z / l]; })();
+  const L2 = (() => { const x = 0.7, y = 0.1, z = -0.5, l = Math.hypot(x, y, z); return [x / l, y / l, z / l]; })();
+  const HV = (() => { const x = L1[0], y = L1[1], z = L1[2] + 1, l = Math.hypot(x, y, z); return [x / l, y / l, z / l]; })();
+
+  // ---------- partículas ----------
+  let parts = [];
+  const PCH = { petalas: ['*', 'o', '~', '`'], coracoes: ['♥', '♥', '.'], brilhos: ['+', '*', '.', '`'] };
+  function newPart(spread) {
+    const k = C.particulas, set = PCH[k];
+    const p = { x: Math.random() * cols, y: spread ? Math.random() * rows : (k === 'coracoes' ? rows + 1 : -1), ph: Math.random() * 6.28, amp: 0.6 + Math.random() * 1.6, sw: 0.6 + Math.random() * 1.2, a: 0.55 + Math.random() * 0.45, ch: set[(Math.random() * set.length) | 0], v: 0, hue: 0 };
+    if (k === 'petalas') { p.v = 1.4 + Math.random() * 2.6; p.hue = 330 + Math.random() * 25; }
+    else if (k === 'coracoes') { p.v = -(1.2 + Math.random() * 2); p.hue = 340 + Math.random() * 20; }
+    else { p.hue = Math.random() < 0.5 ? 180 : 45; }
+    return p;
+  }
+  function initParts() {
+    parts = [];
+    if (reduced || C.particulas === 'nenhuma' || !cols) return;
+    const n = Math.min(64, Math.max(14, Math.round(cols * rows / 140)));
+    for (let i = 0; i < n; i++) parts.push(newPart(true));
+  }
+  function stepParts(dt) {
+    for (const p of parts) {
+      if (!p.v) continue;
+      p.y += p.v * dt;
+      if (p.v > 0 && p.y > rows + 1) Object.assign(p, newPart(false));
+      else if (p.v < 0 && p.y < -1) Object.assign(p, newPart(false));
+    }
+  }
+  function drawParts(tt) {
+    if (!parts.length || !revealed) return;
+    ctx.font = `500 ${Math.round(S.font * dpr)}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const L = 74;
+    for (const p of parts) {
+      const x = p.x + Math.sin(tt * p.sw + p.ph) * p.amp;
+      ctx.globalAlpha = p.v ? p.a : 0.25 + 0.75 * Math.abs(Math.sin(tt * p.sw * 1.6 + p.ph));
+      ctx.fillStyle = `hsl(${p.hue} 85% ${L}%)`;
+      ctx.fillText(p.ch, offX + x * cw + cw / 2, offY + p.y * ch + ch / 2);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function render(tt) {
+    if (!M) return;
+    const n = S.fx ? M.count : M.base, pos = M.pos, nor = M.nor, mat = M.mat, colA = M.col, tintA = M.tint;
+    const cyw = Math.cos(S.yaw), syw = Math.sin(S.yaw), cp = Math.cos(S.pitch), sp = Math.sin(S.pitch);
+    const r00 = cyw, r02 = syw, r10 = sp * syw, r11 = cp, r12 = -sp * cyw, r20 = -cp * syw, r21 = sp, r22 = cp * cyw;
+    const px = S.zoom * 0.36 * Math.min(W, H), sx = px / cw, sy = px / ch, camD = 4.5, cx0 = cols / 2, cy0 = rows * 0.47;
+    const big = S.zoom > 1.4;
+    let limY = 1e9;
+    if (C.crescer) {
+      const g = growT0 == null ? 0 : clamp((tt - growT0) / GROW, 0, 1);
+      if (g < 1) limY = M.yMin + (M.yMax - M.yMin) * ease(g) + 1e-3;
+    }
+    zbuf.fill(-1e9); ibuf.fill(-1);
+    for (let i = 0, k = 0; i < n; i++, k += 3) {
+      const x = pos[k], y = pos[k + 1], z = pos[k + 2];
+      if (y > limY && i < M.base) continue;
+      const zz = r20 * x + r21 * y + r22 * z, f = camD / (camD - zz);
+      const fx = cx0 + (r00 * x + r02 * z) * sx * f;
+      if (fx < 0 || fx >= cols) continue;
+      const fy = cy0 - (r10 * x + r11 * y + r12 * z) * sy * f;
+      if (fy < 0 || fy >= rows) continue;
+      const c = fx | 0, r = fy | 0, id = r * cols + c;
+      if (zz > zbuf[id]) { zbuf[id] = zz; ibuf[id] = i; }
+      if (big) {
+        const c2 = c + ((fx - c) > 0.5 ? 1 : -1), r2 = r + ((fy - r) > 0.5 ? 1 : -1);
+        if (c2 >= 0 && c2 < cols) { const j = r * cols + c2; if (zz > zbuf[j]) { zbuf[j] = zz; ibuf[j] = i; } }
+        if (r2 >= 0 && r2 < rows) { const j = r2 * cols + c; if (zz > zbuf[j]) { zbuf[j] = zz; ibuf[j] = i; } }
+      }
+    }
+    const fxOn = S.fx, sweep = Math.sin(tt * 0.7) * 0.95, flick = fxOn && !reduced ? 0.97 + 0.03 * Math.sin(tt * 31) * Math.sin(tt * 7) : 1;
+    const pal = S.pal, palRow = pal === 'green' ? 8 * 3 : 2 * 3, rimK = fxOn ? 0.55 : 0.2, total = cols * rows, nm1 = N - 1;
+    for (let id = 0; id < total; id++) {
+      const i = ibuf[id];
+      if (i < 0) { cellCol[id] = -1; continue; }
+      const k = i * 3, m = mat[i], wy = pos[k + 1], tint = tintA[i];
+      let b, row = 0;
+      if (m === MAT.PED) {
+        b = 0.22 + 0.6 * Math.pow(0.5 + 0.5 * Math.sin(tint * TAU * 3 - tt * 1.8), 3);
+        row = pal === 'holo' ? 12 * 3 : pal === 'natural' ? (Math.round(190 / 15) % HB) * 3 + 1 : palRow;
+      } else {
+        const nx = nor[k], ny = nor[k + 1], nz = nor[k + 2];
+        let vx = r00 * nx + r02 * nz, vy = r10 * nx + r11 * ny + r12 * nz, vz = r20 * nx + r21 * ny + r22 * nz;
+        if (vz < 0) { vx = -vx; vy = -vy; vz = -vz; }
+        let d = vx * L1[0] + vy * L1[1] + vz * L1[2]; if (d < 0) d = 0;
+        let d2 = vx * L2[0] + vy * L2[1] + vz * L2[2]; if (d2 < 0) d2 = 0;
+        const hd = vx * HV[0] + vy * HV[1] + vz * HV[2], spc = hd > 0 ? Math.pow(hd, 22) : 0;
+        const rim = Math.pow(1 - vz, 2.2);
+        b = (0.16 + 0.66 * d + 0.22 * d2) * MATB[m] * tint + SPEC[m] * spc * 0.7 + rim * rimK;
+        if (pal === 'holo') {
+          const hh = 175 + 130 * (0.5 + 0.5 * Math.sin(vx * 2.0 + vy * 1.6 + vz * 0.8 + tt * 0.45 + wy * 2.4));
+          row = (Math.round(hh / 15) % HB) * 3;
+        } else if (pal === 'natural') { const c = NAT[colA[i]]; row = (Math.round(c[0] / 15) % HB) * 3 + c[1]; }
+        else row = palRow;
+      }
+      if (fxOn) { const dy = wy - sweep; b += 0.5 * Math.exp(-(dy * dy) / 0.006); }
+      b = Math.pow(clamp(b * flick, 0, 1), 0.85);
+      cellB[id] = b; cellRow[id] = row;
+      const c = id % cols, r = (id / cols) | 0, bb = b;
+      const idx = Math.floor(bb * nm1 + (BAY[(r & 3) * 4 + (c & 3)] / 16 - 0.5) * 0.7 + 0.5);
+      cellCol[id] = idx < 1 ? 1 : idx > nm1 ? nm1 : idx;
+    }
+    if (S.edges) {
+      const aspect = ch / cw;
+      for (let r = 1; r < rows - 1; r++) for (let c = 1; c < cols - 1; c++) {
+        const id = r * cols + c;
+        if (ibuf[id] < 0 || cellB[id] < 0.12) continue;
+        const z0 = zbuf[id], iR = id + 1, iL = id - 1, iD = id + cols, iU = id - cols;
+        const zr = ibuf[iR] < 0 ? z0 - 0.5 : zbuf[iR], zl = ibuf[iL] < 0 ? z0 - 0.5 : zbuf[iL];
+        const zd = ibuf[iD] < 0 ? z0 - 0.5 : zbuf[iD], zu = ibuf[iU] < 0 ? z0 - 0.5 : zbuf[iU];
+        const gx = zr - zl, gy = zd - zu;
+        if (Math.max(Math.abs(gx), Math.abs(gy)) < 0.18) continue;
+        let a = Math.atan2(gy / aspect, gx) + Math.PI / 2; a = ((a % Math.PI) + Math.PI) % Math.PI;
+        const e = (a < Math.PI / 8 || a > 7 * Math.PI / 8) ? 0 : a < 3 * Math.PI / 8 ? 1 : a < 5 * Math.PI / 8 ? 2 : 3;
+        cellCol[id] = N + e * 3 + (cellB[id] < 0.4 ? 0 : cellB[id] < 0.7 ? 1 : 2);
+      }
+    }
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
+    for (let r = 0; r < rows; r++) {
+      const dy = offY + r * ch;
+      for (let c = 0; c < cols; c++) {
+        const id = r * cols + c, col = cellCol[id];
+        if (col < 0) continue;
+        const row = cellRow[id];
+        if (!built[row * tileTotal + col]) ensureTile(col, row);
+        ctx.drawImage(atlas, col * cw, row * ch, cw, ch, offX + c * cw, dy, cw, ch);
+      }
+    }
+    if (fxOn) {
+      bloomA.getContext('2d').drawImage(canvas, 0, 0, bloomA.width, bloomA.height);
+      bloomB.getContext('2d').drawImage(canvas, 0, 0, bloomB.width, bloomB.height);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.55; ctx.drawImage(bloomA, 0, 0, W, H);
+      ctx.globalAlpha = 0.45; ctx.drawImage(bloomB, 0, 0, W, H);
+      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    }
+    drawParts(tt);
+  }
+
+  // ---------- laço principal (com ajuste automático em aparelhos lentos) ----------
+  let last = 0, fN = 0, fT = 0, slowSteps = 0;
+  function frame(ts) {
+    requestAnimationFrame(frame);
+    const t = ts / 1000, dt = last ? Math.min(0.05, t - last) : 0.016; last = t;
+    if (!S.dragging) {
+      S.yaw += S.yawV * dt; S.pitch += S.pitchV * dt;
+      const decay = Math.exp(-3 * dt); S.yawV *= decay; S.pitchV *= decay;
+      if (S.auto) S.yaw += 0.3 * dt;
+    }
+    S.pitch = clamp(S.pitch, -1.3, 1.3);
+    stepParts(dt);
+    if (ready && revealed) render(t); // atrás do envelope não precisa desenhar
+    fN++;
+    if (t - fT > 2.5) {
+      const fps = fN / (t - fT); fN = 0; fT = t;
+      if (revealed && ready && fps < 20 && slowSteps < 3 && S.font < 13 && !document.hidden) {
+        slowSteps++; S.font++; $('font').value = S.font; $('fontVal').textContent = S.font + ' px'; resize();
+        if (M && Math.abs(densityNow() - M.D) >= 0.2) scheduleBuild(false);
+      }
+    }
+  }
+
+  // ---------- giro com mouse, dedo e teclado ----------
+  const ptrs = new Map(); let pinch = 0, lastMove = 0;
+  canvas.addEventListener('pointerdown', (e) => {
+    canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    S.dragging = true; S.yawV = 0; S.pitchV = 0; lastMove = performance.now();
+    if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = Math.hypot(a.x - b.x, a.y - b.y); }
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    const p = ptrs.get(e.pointerId); if (!p) return;
+    const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
+    if (ptrs.size === 1) {
+      const now = performance.now(), dt = Math.max(0.008, (now - lastMove) / 1000); lastMove = now;
+      S.yaw += dx * 0.008; S.pitch += dy * 0.008;
+      S.yawV = clamp(dx * 0.008 / dt, -6, 6); S.pitchV = clamp(dy * 0.008 / dt, -6, 6);
+    } else if (ptrs.size === 2) {
+      const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (pinch > 0) S.zoom = clamp(S.zoom * d / pinch, 0.6, 2.4);
+      pinch = d;
+    }
+  });
+  const up = (e) => { ptrs.delete(e.pointerId); if (!ptrs.size) S.dragging = false; pinch = 0; };
+  canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
+  canvas.addEventListener('wheel', (e) => { e.preventDefault(); S.zoom = clamp(S.zoom * Math.exp(-e.deltaY * 0.0015), 0.6, 2.4); }, { passive: false });
+  canvas.addEventListener('keydown', (e) => {
+    const k = e.key;
+    if (k === 'ArrowLeft') S.yaw -= 0.15; else if (k === 'ArrowRight') S.yaw += 0.15;
+    else if (k === 'ArrowUp') S.pitch -= 0.12; else if (k === 'ArrowDown') S.pitch += 0.12;
+    else if (k === '+' || k === '=') S.zoom = clamp(S.zoom * 1.1, 0.6, 2.4);
+    else if (k === '-') S.zoom = clamp(S.zoom / 1.1, 0.6, 2.4);
+    else return;
+    e.preventDefault();
+  });
+
+  // ---------- flores e opções ----------
+  if (C.flores.length > 1) {
+    const box = $('models'); box.hidden = false;
+    C.flores.forEach((k) => {
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = MODELOS[k]; b.dataset.model = k;
+      b.setAttribute('aria-pressed', String(k === S.model));
+      b.addEventListener('click', () => {
+        S.model = k; box.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); scheduleBuild(true);
+      });
+      box.appendChild(b);
+    });
+  }
+  $('opt').hidden = !C.opcoes;
+  $('palSel').value = S.pal; $('rampSel').value = S.ramp;
+  $('palSel').addEventListener('change', (e) => { S.pal = e.target.value; });
+  $('rampSel').addEventListener('change', (e) => { S.ramp = e.target.value; buildAtlas(); });
+  $('font').value = S.font; $('fontVal').textContent = S.font + ' px';
+  $('font').addEventListener('input', (e) => { S.font = +e.target.value; $('fontVal').textContent = S.font + ' px'; resize(); });
+  $('font').addEventListener('change', () => { if (M && Math.abs(densityNow() - M.D) >= 0.2) scheduleBuild(false); });
+  $('auto').checked = S.auto; $('edges').checked = S.edges; $('fx').checked = S.fx;
+  $('auto').addEventListener('change', (e) => { S.auto = e.target.checked; });
+  $('edges').addEventListener('change', (e) => { S.edges = e.target.checked; });
+  $('fx').addEventListener('change', (e) => { S.fx = e.target.checked; });
+  $('reset').addEventListener('click', () => { S.yaw = 0.5; S.pitch = 0.22; S.zoom = 1.2; S.yawV = 0; S.pitchV = 0; });
+
+  // ---------- música ----------
+  const temMusica = C.musica !== 'nenhuma';
+  let ac = null, master = null, music = null, mplayer = null, timer = 0, musicOn = false, styleName = temMusica ? C.musica : 'caixinha';
+  function paint() { $('mus').setAttribute('aria-pressed', String(musicOn)); $('mus').textContent = 'Música: ' + (musicOn ? 'ligada' : 'desligada'); }
+  function ensureAudio() {
+    if (ac) return true;
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false;
+    ac = new AC(); master = ac.createGain(); master.gain.value = 0; master.connect(ac.destination);
+    music = makeMusic(ac, master); return true;
+  }
+  function useStyle(name) {
+    styleName = name;
+    if (!ac || !music) return;
+    mplayer = music.player(name); mplayer.start(ac.currentTime + 0.2);
+    if (!timer) timer = setInterval(() => { if (mplayer && ac && ac.state === 'running') mplayer.fill(ac.currentTime + 0.4); }, 100);
+  }
+  function fade(to, secs) {
+    master.gain.cancelScheduledValues(ac.currentTime); master.gain.setValueAtTime(master.gain.value, ac.currentTime);
+    master.gain.linearRampToValueAtTime(to, ac.currentTime + secs);
+  }
+  function musicStart() {
+    if (!temMusica || C.previa) return;
+    if (!ensureAudio()) return;
+    ac.resume(); if (!mplayer) useStyle(styleName); else mplayer.start(ac.currentTime + 0.2);
+    fade(0.7, 2.5); musicOn = true; paint();
+  }
+  function musicStop() {
+    musicOn = false; paint();
+    if (ac) { fade(0, 0.4); setTimeout(() => { if (!musicOn && ac) ac.suspend(); }, 500); }
+  }
+  if (!temMusica) $('tools').hidden = true;
+  else $('mus').addEventListener('click', () => { musicOn ? musicStop() : musicStart(); });
+
+  // ---------- mensagem digitada ----------
+  let typingTimer = 0, typingDone = false;
+  function showSignature() {
+    $('sign').textContent = C.assinatura; $('sign').classList.add('show');
+    $('ask').hidden = !C.guia.length; typingDone = true;
+  }
+  function typeMessage() {
+    const box = $('msg'); box.textContent = '';
+    const paras = C.mensagem.map(() => { const p = document.createElement('p'); box.appendChild(p); return p; });
+    const finish = () => { clearTimeout(typingTimer); paras.forEach((p, i) => { p.textContent = C.mensagem[i]; p.classList.remove('typing'); }); showSignature(); };
+    $('msg').onclick = () => { if (!typingDone) finish(); };
+    if (reduced || C.previa) { finish(); return; }
+    const total = C.mensagem.reduce((a, p) => a + p.length, 0) || 1, spd = clamp(12000 / total, 8, 34);
+    let pi = 0, ci = 0;
+    (function tick() {
+      if (pi >= paras.length) { showSignature(); return; }
+      const t = C.mensagem[pi]; paras[pi].classList.add('typing'); paras[pi].textContent = t.slice(0, ++ci);
+      if (ci >= t.length) { paras[pi].classList.remove('typing'); pi++; ci = 0; typingTimer = setTimeout(tick, 700); }
+      else typingTimer = setTimeout(tick, /[.,!?]/.test(t[ci - 1]) ? spd * 8 : spd);
+    })();
+  }
+
+  // ---------- capa, verificação e abertura ----------
+  $('coverText').textContent = C.capa;
+  $('envTo').textContent = C.para ? 'Para ' + C.para : '';
+  $('eyebrow').textContent = C.data ? 'Uma carta · ' + C.data : 'Uma carta para você';
+  $('para').textContent = C.para ? 'Para ' + C.para : '';
+  $('para').hidden = !C.para;
+  if (!temMusica) $('coverHint').textContent = 'toque no selo';
+  const perguntas = C.verificacao;
+  let qi = 0, erros = 0;
+  function showQ() {
+    const q = perguntas[qi];
+    $('quizStep').textContent = 'Só para ter certeza · ' + (qi + 1) + ' de ' + perguntas.length;
+    $('quizQ').textContent = q.q; $('quizIn').value = ''; $('quizFb').textContent = '';
+    $('quizIn').inputMode = q.t === 'd' ? 'numeric' : 'text';
+    $('quizIn').placeholder = q.t === 'd' ? 'dia/mês' : '';
+    erros = 0; $('quizIn').focus();
+  }
+  $('quiz').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const q = perguntas[qi], v = $('quizIn').value;
+    if (!v.trim()) { $('quizFb').textContent = 'Escreva a sua resposta.'; return; }
+    const ok = q.t === 'd' ? Quiz.matchDate(v, q.h) : Quiz.matchText(v, q.h);
+    if (ok || erros >= 2) {
+      qi++;
+      if (qi >= perguntas.length) { $('quiz').hidden = true; abrir(); } else showQ();
+      return;
+    }
+    erros++;
+    $('quizFb').textContent = erros === 1 ? 'Hmm, não era essa. Tente de novo.' : (q.d ? 'Dica: ' + q.d : 'Última chance, depois eu deixo passar.');
+    $('quizIn').select();
+  });
+  function revelar() {
+    if (revealed) return;
+    revealed = true; growT0 = performance.now() / 1000;
+    typeMessage();
+  }
+  function abrir() {
+    // chamado dentro de um toque do usuário, para o navegador liberar o som
+    musicStart();
+    $('env').hidden = false; $('coverText').hidden = false;
+    if (reduced) { $('cover').classList.add('gone'); revelar(); return; }
+    $('cover').classList.add('opening'); $('env').classList.add('open');
+    setTimeout(() => { $('cover').classList.add('gone'); }, 2300);
+    setTimeout(revelar, 2500);
+  }
+  $('open').addEventListener('click', () => {
+    if (!perguntas.length) { abrir(); return; }
+    $('env').hidden = true; $('coverText').hidden = true; $('coverHint').hidden = true;
+    $('quiz').hidden = false; qi = 0; showQ();
+  });
+
+  // ---------- guia de presentes ----------
+  const campos = $('guiaCampos');
+  C.guia.forEach((p, i) => {
+    const l = document.createElement('label'), s = document.createElement('span'), inp = document.createElement('input');
+    s.textContent = p; inp.type = 'text'; inp.id = 'g' + i; inp.autocomplete = 'off';
+    l.appendChild(s); l.appendChild(inp); campos.appendChild(l);
+  });
+  $('guiaIntro').textContent = C.retorno
+    ? 'Só por brincadeira, para acertar nos próximos presentes. No fim você escolhe se quer mandar as respostas. Pode deixar em branco o que não quiser contar.'
+    : 'Só por brincadeira, para acertar nos próximos presentes. Nada é enviado a ninguém, e você pode deixar em branco o que não quiser contar.';
+  const closeSheet = () => { $('sheet').hidden = true; $('askBtn').focus(); };
+  $('askBtn').addEventListener('click', () => { $('sheet').hidden = false; $('guia').hidden = false; $('resultado').hidden = true; const f = $('g0'); if (f) f.focus(); });
+  $('guiaFechar').addEventListener('click', closeSheet);
+  $('resFechar').addEventListener('click', closeSheet);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('sheet').hidden) closeSheet(); });
+  let respostasTxt = '';
+  $('guia').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const linhas = [];
+    C.guia.forEach((p, i) => { const v = $('g' + i).value.trim(); if (v) linhas.push(p + '\n' + v); });
+    if (!linhas.length) { $('sheet').hidden = true; return; }
+    respostasTxt = linhas.join('\n\n');
+    $('resTxt').textContent = respostasTxt;
+    if (C.retorno) {
+      const msg = 'Minhas respostas ao guia de presentes:\n\n' + respostasTxt;
+      $('resIntro').textContent = 'Estas são as suas respostas. Se quiser, mande para quem te deu a carta.';
+      $('wa').hidden = false; $('wa').href = 'https://wa.me/' + C.retorno.num + '?text=' + encodeURIComponent(msg);
+      $('resCopiar').hidden = false;
+      $('resCopiar').onclick = async () => {
+        try { await navigator.clipboard.writeText(msg); $('resMsg').textContent = 'Respostas copiadas. É só colar numa conversa.'; }
+        catch (err) { $('resMsg').textContent = 'Seu navegador bloqueou a cópia. Selecione o texto acima e copie.'; }
+      };
+    } else {
+      $('resIntro').textContent = 'Isto é só uma brincadeira. As respostas ficam só na sua tela, e não precisa mandar nada.';
+    }
+    $('guia').hidden = true; $('resultado').hidden = false;
+  });
+
+  // ---------- rodapé e partida ----------
+  const site = CARTA ? C.site : new URL('./', location.href).href;
+  if (C.divulgar && /^https?:\/\//.test(site)) {
+    const a = document.createElement('a'); a.href = site; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Crie a sua';
+    $('foot').append('Feito com Cartinha ASCII · '); $('foot').appendChild(a); $('foot').hidden = false;
+  }
+  let rt = 0;
+  new ResizeObserver(() => { clearTimeout(rt); rt = setTimeout(() => { if (!ready) return; resize(); if (M && Math.abs(densityNow() - M.D) >= 0.2) scheduleBuild(false); }, 60); }).observe(stage);
+  function start() {
+    if (ready) return;
+    resize(); buildModel(); ready = true;
+    if (C.previa) { $('cover').classList.add('gone'); revelar(); }
+  }
+  const fr = (document.fonts && document.fonts.load) ? document.fonts.load('500 16px "IBM Plex Mono"') : Promise.resolve();
+  Promise.race([fr, new Promise((r) => setTimeout(r, 1200))]).then(start, start);
+  requestAnimationFrame(frame);
+}
+</script>
+</body>
+</html>
